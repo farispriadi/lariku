@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>LARI.KU — Running Tracker &amp; Social Share Card</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            neon: '#C6FF00',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #050507;
+      color: #ffffff;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    /* Pola papan catur (checkerboard) untuk pratinjau transparansi PNG */
+    .checkerboard {
+      background-color: #18181b;
+      background-image:
+        linear-gradient(45deg, #27272a 25%, transparent 25%),
+        linear-gradient(-45deg, #27272a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #27272a 75%),
+        linear-gradient(-45deg, transparent 75%, #27272a 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+    /* Custom range slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #27272a;
+      height: 8px;
+      border-radius: 999px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #C6FF00;
+      cursor: pointer;
+      border: 3px solid #09090b;
+      box-shadow: 0 0 10px rgba(198, 255, 0, 0.4);
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] flex items-center justify-center md:py-6 overflow-x-hidden">
+
+  <!-- Mobile-First App Shell (Max 480px, terpusat di desktop) -->
+  <div id="app-shell" class="w-full max-w-[480px] min-h-[100dvh] md:min-h-[844px] md:max-h-[920px] bg-zinc-950 md:rounded-[2rem] md:border md:border-zinc-800 shadow-2xl flex flex-col relative overflow-hidden">
+
+    <!-- ==================== LAYAR 1: PELACAK LARI (TRACKER) ==================== -->
+    <section id="view-tracker" class="flex-1 flex flex-col justify-between p-5 gap-4">
+
+      <!-- Header Utama -->
+      <header class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-neon shadow-[0_0_8px_#C6FF00]"></span>
+          <h1 class="text-lg font-black tracking-wider uppercase">LARI<span class="text-neon">.KU</span></h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="wakelock-badge" class="hidden text-[11px] font-semibold px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300">
+            Layar Aktif
+          </span>
+          <span id="gps-badge" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 flex items-center gap-1.5">
+            <span id="gps-dot" class="w-2 h-2 rounded-full bg-zinc-500"></span>
+            <span id="gps-text">Siap</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- Bar Profil Kalori & Toggle Mode Simulasi -->
+      <div class="space-y-2.5">
+        <!-- Ringkasan Profil Kalori (Zero-Friction) -->
+        <div class="flex items-center justify-between bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-2.5">
+          <div class="min-w-0">
+            <p class="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">Profil Kalori (Lokal)</p>
+            <p id="profile-summary" class="text-sm font-bold text-white truncate">65 kg &bull; 25-34 th &bull; Pria</p>
+          </div>
+          <button id="btn-open-profile" type="button" class="shrink-0 text-xs font-bold px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-neon transition">
+            Ubah
+          </button>
+        </div>
+
+        <!-- Toggle Mode Simulasi Lari -->
+        <label for="toggle-sim" class="flex items-center justify-between bg-zinc-900/60 border border-zinc-800/80 rounded-2xl px-4 py-2.5 cursor-pointer select-none">
+          <div>
+            <p class="text-sm font-bold text-zinc-100">Mode Simulasi Lari</p>
+            <p class="text-[11px] text-zinc-400">Uji coba rute &amp; metrik di dalam ruangan</p>
+          </div>
+          <div class="relative inline-flex items-center">
+            <input id="toggle-sim" type="checkbox" class="sr-only peer" />
+            <div class="w-12 h-7 bg-zinc-800 rounded-full peer peer-checked:bg-neon transition-colors"></div>
+            <div class="absolute left-1 top-1 w-5 h-5 bg-white peer-checked:bg-zinc-950 rounded-full transition-transform peer-checked:translate-x-5"></div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Visualisasi Garis Rute Live (HTML5 Canvas) -->
+      <div class="relative flex-1 min-h-[155px] bg-zinc-900/70 border border-zinc-800 rounded-3xl overflow-hidden flex items-center justify-center">
+        <canvas id="live-route-canvas" class="w-full h-full block"></canvas>
+        <div id="route-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
+          <svg class="w-7 h-7 text-zinc-600 mb-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          <p class="text-xs font-medium text-zinc-500">Garis rute lari akan tampil secara live di sini</p>
+        </div>
+        <span id="points-counter" class="hidden absolute bottom-2.5 right-3 text-[11px] font-mono font-semibold text-zinc-400 bg-zinc-950/80 px-2 py-0.5 rounded-md border border-zinc-800">
+          0 titik
+        </span>
+      </div>
+
+      <!-- Tampilan Metrik Kontras Tinggi -->
+      <div class="space-y-3">
+        <!-- Metrik Utama: Jarak -->
+        <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl py-4 px-5 text-center">
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Jarak Tempuh</p>
+          <div class="flex items-baseline justify-center gap-2 mt-1">
+            <span id="metric-distance" class="text-6xl font-black tracking-tight tabular-nums text-white leading-none">0.00</span>
+            <span class="text-xl font-extrabold text-neon">km</span>
+          </div>
+        </div>
+
+        <!-- 3 Metrik Sekunder: Durasi, Pace, Kalori -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl py-3.5 px-2 text-center">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Durasi</p>
+            <p id="metric-duration" class="text-2xl font-black tabular-nums text-white mt-1">00:00</p>
+          </div>
+          <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl py-3.5 px-2 text-center">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Pace</p>
+            <p id="metric-pace" class="text-2xl font-black tabular-nums text-white mt-1">--'--"</p>
+          </div>
+          <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl py-3.5 px-2 text-center">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Kalori</p>
+            <p id="metric-calories" class="text-2xl font-black tabular-nums text-neon mt-1">0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pesan Info / Peringatan GPS -->
+      <div id="tracker-alert" class="hidden text-xs font-medium text-amber-300 bg-amber-950/60 border border-amber-800/70 rounded-xl px-3.5 py-2.5"></div>
+
+      <!-- Tombol Kontrol Besar Ramah Jempol -->
+      <div class="pt-1 pb-1">
+        <!-- Status: Siap (Idle) -->
+        <div id="controls-idle">
+          <button id="btn-start" type="button" class="w-full h-16 rounded-2xl bg-neon hover:brightness-110 active:scale-[0.98] text-zinc-950 font-black text-lg tracking-wide uppercase transition shadow-lg shadow-neon/20">
+            Mulai Lari
+          </button>
+        </div>
+
+        <!-- Status: Sedang Berlari (Running) -->
+        <div id="controls-running" class="hidden grid grid-cols-2 gap-3">
+          <button id="btn-pause" type="button" class="h-16 rounded-2xl bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] text-white font-black text-base tracking-wide uppercase transition border border-zinc-700">
+            Jeda
+          </button>
+          <button id="btn-finish-running" type="button" class="h-16 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-black text-base tracking-wide uppercase transition">
+            Selesai
+          </button>
+        </div>
+
+        <!-- Status: Dijeda (Paused) -->
+        <div id="controls-paused" class="hidden grid grid-cols-2 gap-3">
+          <button id="btn-resume" type="button" class="h-16 rounded-2xl bg-neon hover:brightness-110 active:scale-[0.98] text-zinc-950 font-black text-base tracking-wide uppercase transition">
+            Lanjut
+          </button>
+          <button id="btn-finish-paused" type="button" class="h-16 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-black text-base tracking-wide uppercase transition">
+            Selesai
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== LAYAR 2: EDITOR KARTU STATISTIK ==================== -->
+    <section id="view-editor" class="hidden flex-1 flex flex-col justify-between p-5 gap-4 overflow-y-auto">
+      <!-- Header Editor -->
+      <header class="flex items-center justify-between">
+        <button id="btn-new-run" type="button" class="text-xs font-bold px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 active:scale-95 text-zinc-200 transition">
+          &larr; Lari Baru
+        </button>
+        <h2 class="text-sm font-extrabold uppercase tracking-wider text-white">Kartu Statistik</h2>
+        <span class="text-[11px] font-mono text-zinc-400">1080&times;1350</span>
+      </header>
+
+      <!-- Pratinjau Canvas Resolusi Tinggi (Rasio 4:5) -->
+      <div class="w-full flex justify-center">
+        <div id="preview-wrapper" class="checkerboard w-full max-w-[330px] aspect-[4/5] rounded-2xl overflow-hidden border border-zinc-700 shadow-xl relative">
+          <canvas id="share-canvas" width="1080" height="1350" class="w-full h-full block"></canvas>
+        </div>
+      </div>
+
+      <!-- Pengaturan Kartu Statistik -->
+      <div class="space-y-3.5">
+        <!-- Pilihan Latar Belakang -->
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Latar Belakang</p>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button id="btn-bg-transparent" type="button" class="py-2.5 px-3 rounded-xl text-xs font-bold border transition bg-neon text-zinc-950 border-neon">
+              Transparan (Stiker PNG)
+            </button>
+            <button id="btn-bg-photo" type="button" class="py-2.5 px-3 rounded-xl text-xs font-bold border transition bg-zinc-900 text-zinc-200 border-zinc-800 hover:bg-zinc-800">
+              Unggah Foto
+            </button>
+          </div>
+          <input id="input-photo" type="file" accept="image/*" class="hidden" />
+        </div>
+
+        <!-- Pilihan Warna Teks & Garis Rute -->
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Warna Teks &amp; Garis Rute</p>
+          <div class="grid grid-cols-3 gap-2.5">
+            <button data-theme="white" type="button" class="theme-btn py-2.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-zinc-800 border-neon text-white">
+              <span class="w-3.5 h-3.5 rounded-full bg-white border border-zinc-400"></span>
+              Putih
+            </button>
+            <button data-theme="black" type="button" class="theme-btn py-2.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-zinc-900 border-zinc-800 text-zinc-300">
+              <span class="w-3.5 h-3.5 rounded-full bg-zinc-950 border border-zinc-500"></span>
+              Hitam
+            </button>
+            <button data-theme="neon" type="button" class="theme-btn py-2.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition bg-zinc-900 border-zinc-800 text-zinc-300">
+              <span class="w-3.5 h-3.5 rounded-full bg-neon"></span>
+              Hijau Neon
+            </button>
+          </div>
+        </div>
+
+        <!-- Tombol Unduh PNG -->
+        <button id="btn-download" type="button" class="w-full h-14 rounded-2xl bg-neon hover:brightness-110 active:scale-[0.98] text-zinc-950 font-black text-base tracking-wide uppercase transition flex items-center justify-center gap-2 shadow-lg shadow-neon/20">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3" />
+          </svg>
+          Unduh Gambar (PNG)
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== MODAL BOTTOM-SHEET: PROFIL KALORI ==================== -->
+    <div id="modal-profile" class="hidden absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end justify-center">
+      <div class="w-full bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-6 space-y-5 shadow-2xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-black text-white">Pengaturan Profil Kalori</h3>
+            <p class="text-xs text-zinc-400">Menyesuaikan akurasi estimasi kalori MET</p>
+          </div>
+          <button id="btn-close-profile" type="button" class="w-9 h-9 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center font-bold text-lg">
+            &times;
+          </button>
+        </div>
+
+        <!-- Berat Badan (Slider + Input Angka) -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label for="input-weight-num" class="text-xs font-bold uppercase tracking-wider text-zinc-300">Berat Badan (kg)</label>
+            <div class="flex items-center gap-1.5">
+              <input id="input-weight-num" type="number" min="30" max="180" value="65" class="w-20 text-right font-mono font-bold text-base bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-neon focus:outline-none focus:border-neon" />
+              <span class="text-xs font-bold text-zinc-400">kg</span>
+            </div>
+          </div>
+          <input id="input-weight-range" type="range" min="35" max="150" value="65" class="w-full" />
+        </div>
+
+        <!-- Rentang Usia -->
+        <div class="space-y-2">
+          <p class="text-xs font-bold uppercase tracking-wider text-zinc-300">Rentang Usia</p>
+          <div class="grid grid-cols-4 gap-2">
+            <button data-age="<25" type="button" class="age-btn py-2.5 rounded-xl text-xs font-bold border transition">&lt;25</button>
+            <button data-age="25-34" type="button" class="age-btn py-2.5 rounded-xl text-xs font-bold border transition">25-34</button>
+            <button data-age="35-44" type="button" class="age-btn py-2.5 rounded-xl text-xs font-bold border transition">35-44</button>
+            <button data-age="45+" type="button" class="age-btn py-2.5 rounded-xl text-xs font-bold border transition">45+</button>
+          </div>
+        </div>
+
+        <!-- Jenis Kelamin -->
+        <div class="space-y-2">
+          <p class="text-xs font-bold uppercase tracking-wider text-zinc-300">Jenis Kelamin</p>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button data-gender="Pria" type="button" class="gender-btn py-2.5 rounded-xl text-xs font-bold border transition">Pria</button>
+            <button data-gender="Wanita" type="button" class="gender-btn py-2.5 rounded-xl text-xs font-bold border transition">Wanita</button>
+          </div>
+        </div>
+
+        <!-- Catatan Privasi Lokal -->
+        <div class="bg-zinc-950/90 border border-zinc-800 rounded-2xl p-3.5 flex items-start gap-2.5">
+          <svg class="w-4 h-4 text-neon shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <p class="text-[11px] leading-relaxed text-zinc-400">
+            <strong class="text-zinc-200">100% Privasi Lokal:</strong> Semua pengaturan profil dan data sesi lari hanya tersimpan di perangkat Anda (<em>localStorage</em>) dan tidak pernah dikirim ke server mana pun.
+          </p>
+        </div>
+
+        <button id="btn-save-profile" type="button" class="w-full h-12 rounded-2xl bg-neon text-zinc-950 font-black text-sm uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition">
+          Selesai
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    window.addEventListener('load', () => {
+      // =========================================================================
+      // 1. STATE & PROFIL DEFAULT (LOCALSTORAGE)
+      // =========================================================================
+      const PROFILE_KEY = 'lariku_profile_v1';
+      const DEFAULT_PROFILE = { weight: 65, ageRange: '25-34', gender: 'Pria' };
+
+      let profile = loadProfile();
+
+      const state = {
+        status: 'idle', // 'idle' | 'running' | 'paused' | 'finished'
+        simMode: false,
+        startTimestamp: null,
+        accumulatedMs: 0,
+        distanceKm: 0,
+        calories: 0,
+        points: [], // [{ lat, lng, ts }]
+        watchId: null,
+        timerInterval: null,
+        simInterval: null,
+        simStep: 0,
+        wakeLock: null,
+      };
+
+      const editorState = {
+        bgMode: 'transparent', // 'transparent' | 'photo'
+        photoImg: null,
+        theme: 'white', // 'white' | 'black' | 'neon'
+      };
+
+      const THEMES = {
+        white: { primary: '#FFFFFF', secondary: 'rgba(255,255,255,0.75)', accent: '#FFFFFF', shadow: 'rgba(0,0,0,0.5)' },
+        black: { primary: '#111113', secondary: 'rgba(17,17,19,0.75)', accent: '#111113', shadow: 'rgba(255,255,255,0.4)' },
+        neon:  { primary: '#C6FF00', secondary: 'rgba(198,255,0,0.85)', accent: '#C6FF00', shadow: 'rgba(0,0,0,0.6)' },
+      };
+
+      // Referensi Elemen DOM
+      const el = {
+        viewTracker: document.getElementById('view-tracker'),
+        viewEditor: document.getElementById('view-editor'),
+        profileSummary: document.getElementById('profile-summary'),
+        modalProfile: document.getElementById('modal-profile'),
+        btnOpenProfile: document.getElementById('btn-open-profile'),
+        btnCloseProfile: document.getElementById('btn-close-profile'),
+        btnSaveProfile: document.getElementById('btn-save-profile'),
+        weightNum: document.getElementById('input-weight-num'),
+        weightRange: document.getElementById('input-weight-range'),
+        ageBtns: document.querySelectorAll('.age-btn'),
+        genderBtns: document.querySelectorAll('.gender-btn'),
+
+        toggleSim: document.getElementById('toggle-sim'),
+        gpsDot: document.getElementById('gps-dot'),
+        gpsText: document.getElementById('gps-text'),
+        wakeLockBadge: document.getElementById('wakelock-badge'),
+        trackerAlert: document.getElementById('tracker-alert'),
+
+        liveCanvas: document.getElementById('live-route-canvas'),
+        routePlaceholder: document.getElementById('route-placeholder'),
+        pointsCounter: document.getElementById('points-counter'),
+
+        metricDistance: document.getElementById('metric-distance'),
+        metricDuration: document.getElementById('metric-duration'),
+        metricPace: document.getElementById('metric-pace'),
+        metricCalories: document.getElementById('metric-calories'),
+
+        controlsIdle: document.getElementById('controls-idle'),
+        controlsRunning: document.getElementById('controls-running'),
+        controlsPaused: document.getElementById('controls-paused'),
+        btnStart: document.getElementById('btn-start'),
+        btnPause: document.getElementById('btn-pause'),
+        btnResume: document.getElementById('btn-resume'),
+        btnFinishRunning: document.getElementById('btn-finish-running'),
+        btnFinishPaused: document.getElementById('btn-finish-paused'),
+
+        btnNewRun: document.getElementById('btn-new-run'),
+        previewWrapper: document.getElementById('preview-wrapper'),
+        shareCanvas: document.getElementById('share-canvas'),
+        btnBgTransparent: document.getElementById('btn-bg-transparent'),
+        btnBgPhoto: document.getElementById('btn-bg-photo'),
+        inputPhoto: document.getElementById('input-photo'),
+        themeBtns: document.querySelectorAll('.theme-btn'),
+        btnDownload: document.getElementById('btn-download'),
+      };
+
+      function loadProfile() {
+        try {
+          const raw = localStorage.getItem(PROFILE_KEY);
+          if (!raw) return { ...DEFAULT_PROFILE };
+          const parsed = JSON.parse(raw);
+          return {
+            weight: Math.min(180, Math.max(30, Number(parsed.weight) || 65)),
+            ageRange: ['<25', '25-34', '35-44', '45+'].includes(parsed.ageRange) ? parsed.ageRange : '25-34',
+            gender: ['Pria', 'Wanita'].includes(parsed.gender) ? parsed.gender : 'Pria',
+          };
+        } catch {
+          return { ...DEFAULT_PROFILE };
+        }
+      }
+
+      function saveProfile() {
+        try {
+          localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+        } catch (err) {
+          console.warn('Gagal menyimpan ke localStorage:', err);
+        }
+        renderProfileUI();
+      }
+
+      function renderProfileUI() {
+        el.profileSummary.textContent = `${profile.weight} kg • ${profile.ageRange} th • ${profile.gender}`;
+        el.weightNum.value = profile.weight;
+        el.weightRange.value = Math.min(150, Math.max(35, profile.weight));
+
+        el.ageBtns.forEach(btn => {
+          const active = btn.dataset.age === profile.ageRange;
+          btn.className = `age-btn py-2.5 rounded-xl text-xs font-bold border transition ${
+            active ? 'bg-neon text-zinc-950 border-neon' : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
+          }`;
+        });
+
+        el.genderBtns.forEach(btn => {
+          const active = btn.dataset.gender === profile.gender;
+          btn.className = `gender-btn py-2.5 rounded-xl text-xs font-bold border transition ${
+            active ? 'bg-neon text-zinc-950 border-neon' : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:bg-zinc-800'
+          }`;
+        });
+      }
+
+      // =========================================================================
+      // 2. KALKULASI HAVERSINE, PACE, & KALORI MET DINAMIS
+      // =========================================================================
+      function haversineKm(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const toRad = deg => (deg * Math.PI) / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      function getMetFromSpeed(speedKmh) {
+        if (speedKmh < 1.2) return 0;
+        if (speedKmh < 5.0) return 3.5; // Jalan cepat
+        if (speedKmh < 8.0) return 6.0 + ((speedKmh - 5.0) / 3.0) * 2.3; // Jogging ringan
+        if (speedKmh < 12.0) return 8.3 + ((speedKmh - 8.0) / 4.0) * 3.5; // Lari sedang-cepat
+        return Math.min(16.0, 11.8 + (speedKmh - 12.0) * 0.7); // Lari cepat
+      }
+
+      function computeIntervalCalories(distKm, dtSec) {
+        if (dtSec <= 0 || distKm <= 0) return 0;
+        const dtHours = dtSec / 3600;
+        const speedKmh = distKm / dtHours;
+        const met = getMetFromSpeed(speedKmh);
+
+        const ageFactors = { '<25': 1.02, '25-34': 1.00, '35-44': 0.97, '45+': 0.94 };
+        const genderFactors = { Pria: 1.00, Wanita: 0.92 };
+
+        const ageF = ageFactors[profile.ageRange] || 1.0;
+        const genderF = genderFactors[profile.gender] || 1.0;
+
+        // Rumus MET standar dengan penyesuaian usia & jenis kelamin
+        return met * profile.weight * dtHours * ageF * genderF;
+      }
+
+      function getElapsedMs() {
+        if (state.status === 'running' && state.startTimestamp) {
+          return state.accumulatedMs + (Date.now() - state.startTimestamp);
+        }
+        return state.accumulatedMs;
+      }
+
+      function formatDuration(ms) {
+        const totalSec = Math.floor(ms / 1000);
+        const hrs = Math.floor(totalSec / 3600);
+        const mins = Math.floor((totalSec % 3600) / 60);
+        const secs = totalSec % 60;
+        if (hrs > 0) {
+          return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+
+      function formatPace(distanceKm, elapsedMs) {
+        if (distanceKm < 0.01 || elapsedMs < 1000) return `--'--"`;
+        const totalMin = elapsedMs / 60000;
+        const paceMinPerKm = totalMin / distanceKm;
+        if (paceMinPerKm > 30) return `--'--"`;
+        const mins = Math.floor(paceMinPerKm);
+        const secs = Math.round((paceMinPerKm - mins) * 60);
+        if (secs === 60) return `${mins + 1}'00"`;
+        return `${mins}'${String(secs).padStart(2, '0')}"`;
+      }
+
+      // =========================================================================
+      // 3. SCREEN WAKE LOCK API
+      // =========================================================================
+      async function requestWakeLock() {
+        if (!('wakeLock' in navigator)) return;
+        try {
+          state.wakeLock = await navigator.wakeLock.request('screen');
+          el.wakeLockBadge.classList.remove('hidden');
+          state.wakeLock.addEventListener('release', () => {
+            el.wakeLockBadge.classList.add('hidden');
+          });
+        } catch {
+          el.wakeLockBadge.classList.add('hidden');
+        }
+      }
+
+      async function releaseWakeLock() {
+        if (state.wakeLock) {
+          try { await state.wakeLock.release(); } catch {}
+          state.wakeLock = null;
+          el.wakeLockBadge.classList.add('hidden');
+        }
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && state.status === 'running') {
+          requestWakeLock();
+        }
+      });
+
+      // =========================================================================
+      // 4. GEOLOCATION & MODE SIMULASI LARI
+      // =========================================================================
+      function setGpsStatus(label, colorClass) {
+        el.gpsText.textContent = label;
+        el.gpsDot.className = `w-2 h-2 rounded-full ${colorClass}`;
+      }
+
+      function showAlert(msg) {
+        if (!msg) {
+          el.trackerAlert.classList.add('hidden');
+          el.trackerAlert.textContent = '';
+          return;
+        }
+        el.trackerAlert.textContent = msg;
+        el.trackerAlert.classList.remove('hidden');
+      }
+
+      function recordPoint(lat, lng, accuracy = 5) {
+        // Filter akurasi dasar: abaikan titik GPS dengan akurasi > 35 meter
+        if (accuracy > 35) return;
+
+        const now = Date.now();
+        const prev = state.points[state.points.length - 1];
+
+        if (!prev) {
+          state.points.push({ lat, lng, ts: now });
+          drawLiveRoute();
+          return;
+        }
+
+        const distKm = haversineKm(prev.lat, prev.lng, lat, lng);
+        const dtSec = (now - prev.ts) / 1000;
+
+        // Filter drift saat diam (< 2.5 meter) dan lonjakan tidak realistis (> 35 km/jam)
+        if (distKm < 0.0025) return;
+        if (dtSec > 0 && (distKm / (dtSec / 3600)) > 35) return;
+
+        state.distanceKm += distKm;
+        state.calories += computeIntervalCalories(distKm, Math.max(dtSec, 0.5));
+        state.points.push({ lat, lng, ts: now });
+
+        updateMetricsUI();
+        drawLiveRoute();
+      }
+
+      function startTrackingSource() {
+        showAlert('');
+        if (state.simMode) {
+          setGpsStatus('Simulasi Aktif', 'bg-neon animate-pulse');
+          const baseLat = -6.1754;
+          const baseLng = 106.8272;
+          if (state.points.length === 0) {
+            state.simStep = 0;
+            recordPoint(baseLat, baseLng, 3);
+          }
+
+          state.simInterval = setInterval(() => {
+            if (state.status !== 'running') return;
+            state.simStep += 1;
+            // Rute lintasan melingkar realistis (~10.5 km/jam, pace ~5'42"/km)
+            const t = state.simStep * 0.055;
+            const radiusLat = 0.00052;
+            const radiusLng = 0.00072;
+            const lat = baseLat + Math.sin(t) * radiusLat + Math.sin(2 * t) * 0.00012;
+            const lng = baseLng + (1 - Math.cos(t)) * radiusLng;
+            recordPoint(lat, lng, 4);
+          }, 1000);
+          return;
+        }
+
+        if (!('geolocation' in navigator)) {
+          setGpsStatus('GPS Tidak Didukung', 'bg-rose-500');
+          showAlert('Browser tidak mendukung Geolocation. Aktifkan "Mode Simulasi Lari" untuk uji coba.');
+          return;
+        }
+
+        setGpsStatus('Mencari GPS...', 'bg-amber-400 animate-pulse');
+        state.watchId = navigator.geolocation.watchPosition(
+          pos => {
+            if (state.status !== 'running') return;
+            const acc = Math.round(pos.coords.accuracy);
+            setGpsStatus(`GPS ±${acc}m`, acc <= 20 ? 'bg-neon' : 'bg-amber-400');
+            recordPoint(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+          },
+          err => {
+            setGpsStatus('GPS Bermasalah', 'bg-rose-500');
+            showAlert(`Izin lokasi diperlukan (${err.message}). Aktifkan "Mode Simulasi Lari" untuk mencoba di dalam ruangan.`);
+          },
+          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        );
+      }
+
+      function stopTrackingSource() {
+        if (state.watchId !== null) {
+          navigator.geolocation.clearWatch(state.watchId);
+          state.watchId = null;
+        }
+        if (state.simInterval !== null) {
+          clearInterval(state.simInterval);
+          state.simInterval = null;
+        }
+      }
+
+      // =========================================================================
+      // 5. KONTROL SESI LARI & VISUALISASI RUTE LIVE
+      // =========================================================================
+      function updateControlsUI() {
+        el.controlsIdle.classList.toggle('hidden', state.status !== 'idle');
+        el.controlsRunning.classList.toggle('hidden', state.status !== 'running');
+        el.controlsPaused.classList.toggle('hidden', state.status !== 'paused');
+        el.toggleSim.disabled = state.status !== 'idle';
+      }
+
+      function updateMetricsUI() {
+        const elapsed = getElapsedMs();
+        el.metricDistance.textContent = state.distanceKm.toFixed(2);
+        el.metricDuration.textContent = formatDuration(elapsed);
+        el.metricPace.textContent = formatPace(state.distanceKm, elapsed);
+        el.metricCalories.textContent = Math.round(state.calories);
+      }
+
+      function startRun() {
+        state.status = 'running';
+        state.startTimestamp = Date.now();
+        state.accumulatedMs = 0;
+        state.distanceKm = 0;
+        state.calories = 0;
+        state.points = [];
+        state.simStep = 0;
+
+        updateControlsUI();
+        updateMetricsUI();
+        drawLiveRoute();
+        requestWakeLock();
+        startTrackingSource();
+
+        clearInterval(state.timerInterval);
+        state.timerInterval = setInterval(updateMetricsUI, 500);
+      }
+
+      function pauseRun() {
+        if (state.status !== 'running') return;
+        state.accumulatedMs += Date.now() - state.startTimestamp;
+        state.startTimestamp = null;
+        state.status = 'paused';
+        stopTrackingSource();
+        releaseWakeLock();
+        clearInterval(state.timerInterval);
+        setGpsStatus('Dijeda', 'bg-amber-400');
+        updateControlsUI();
+        updateMetricsUI();
+      }
+
+      function resumeRun() {
+        if (state.status !== 'paused') return;
+        state.status = 'running';
+        state.startTimestamp = Date.now();
+        requestWakeLock();
+        startTrackingSource();
+        clearInterval(state.timerInterval);
+        state.timerInterval = setInterval(updateMetricsUI, 500);
+        updateControlsUI();
+      }
+
+      function finishRun() {
+        if (state.status === 'running' && state.startTimestamp) {
+          state.accumulatedMs += Date.now() - state.startTimestamp;
+          state.startTimestamp = null;
+        }
+        state.status = 'finished';
+        stopTrackingSource();
+        releaseWakeLock();
+        clearInterval(state.timerInterval);
+
+        el.viewTracker.classList.add('hidden');
+        el.viewEditor.classList.remove('hidden');
+        renderShareCard();
+      }
+
+      function resetToNewRun() {
+        state.status = 'idle';
+        state.accumulatedMs = 0;
+        state.startTimestamp = null;
+        state.distanceKm = 0;
+        state.calories = 0;
+        state.points = [];
+        setGpsStatus(state.simMode ? 'Mode Simulasi' : 'Siap', state.simMode ? 'bg-neon' : 'bg-zinc-500');
+        showAlert('');
+
+        el.viewEditor.classList.add('hidden');
+        el.viewTracker.classList.remove('hidden');
+        updateControlsUI();
+        updateMetricsUI();
+        drawLiveRoute();
+      }
+
+      function normalizePoints(points, boxX, boxY, boxW, boxH) {
+        if (points.length === 0) return [];
+        const avgLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
+        const lngScale = Math.cos((avgLat * Math.PI) / 180);
+
+        const projected = points.map(p => ({ x: p.lng * lngScale, y: -p.lat }));
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const pt of projected) {
+          if (pt.x < minX) minX = pt.x;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.y < minY) minY = pt.y;
+          if (pt.y > maxY) maxY = pt.y;
+        }
+
+        const spanX = maxX - minX;
+        const spanY = maxY - minY;
+        if (spanX === 0 && spanY === 0) {
+          return [{ x: boxX + boxW / 2, y: boxY + boxH / 2 }];
+        }
+
+        const scale = Math.min(
+          spanX > 0 ? boxW / spanX : Infinity,
+          spanY > 0 ? boxH / spanY : Infinity
+        );
+        const offsetX = boxX + (boxW - spanX * scale) / 2;
+        const offsetY = boxY + (boxH - spanY * scale) / 2;
+
+        return projected.map(pt => ({
+          x: offsetX + (pt.x - minX) * scale,
+          y: offsetY + (pt.y - minY) * scale,
+        }));
+      }
+
+      function drawLiveRoute() {
+        const canvas = el.liveCanvas;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+
+        const count = state.points.length;
+        el.routePlaceholder.classList.toggle('hidden', count > 0);
+        el.pointsCounter.classList.toggle('hidden', count === 0);
+        el.pointsCounter.textContent = `${count} titik`;
+
+        if (count === 0) return;
+
+        const pad = 26;
+        const pts = normalizePoints(state.points, pad, pad, rect.width - pad * 2, rect.height - pad * 2);
+
+        if (pts.length >= 2) {
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
+          }
+          ctx.strokeStyle = '#C6FF00';
+          ctx.lineWidth = 4;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.shadowColor = 'rgba(198,255,0,0.45)';
+          ctx.shadowBlur = 10;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        // Titik awal
+        ctx.beginPath();
+        ctx.arc(pts[0].x, pts[0].y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        // Titik posisi terkini
+        const last = pts[pts.length - 1];
+        ctx.beginPath();
+        ctx.arc(last.x, last.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#C6FF00';
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#09090b';
+        ctx.stroke();
+      }
+
+      // =========================================================================
+      // 6. PEMBUAT KARTU STATISTIK TRANSPARAN (HIGH-RES 1080 x 1350)
+      // =========================================================================
+      function renderShareCard() {
+        const canvas = el.shareCanvas;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;  // 1080
+        const H = canvas.height; // 1350
+        const theme = THEMES[editorState.theme];
+
+        // 1. Bersihkan canvas (menjaga saluran alpha transparan asli)
+        ctx.clearRect(0, 0, W, H);
+
+        // 2. Gambar foto latar belakang (cover fit) jika mode foto dipilih
+        if (editorState.bgMode === 'photo' && editorState.photoImg) {
+          const img = editorState.photoImg;
+          const imgRatio = img.width / img.height;
+          const canvasRatio = W / H;
+          let drawW, drawH, offsetX, offsetY;
+
+          if (imgRatio > canvasRatio) {
+            drawH = H;
+            drawW = H * imgRatio;
+            offsetX = -(drawW - W) / 2;
+            offsetY = 0;
+          } else {
+            drawW = W;
+            drawH = W / imgRatio;
+            offsetX = 0;
+            offsetY = -(drawH - H) / 2;
+          }
+          ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+
+          // Gradien halus di bagian bawah untuk menjaga keterbacaan stiker
+          if (editorState.theme !== 'black') {
+            const grad = ctx.createLinearGradient(0, H * 0.45, 0, H);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.48)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+          }
+        }
+
+        const applyShadow = () => {
+          ctx.shadowColor = editorState.bgMode === 'photo' ? theme.shadow : 'transparent';
+          ctx.shadowBlur = editorState.bgMode === 'photo' ? 18 : 0;
+          ctx.shadowOffsetY = editorState.bgMode === 'photo' ? 4 : 0;
+        };
+
+        // 3. Header Tanggal & Watermark Minimalis
+        const dateStr = new Date().toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }).toUpperCase();
+
+        ctx.save();
+        applyShadow();
+        ctx.fillStyle = theme.secondary;
+        ctx.font = '700 30px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(dateStr, 80, 108);
+
+        ctx.fillStyle = theme.primary;
+        ctx.font = '900 34px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('LARI.KU', W - 80, 108);
+        ctx.restore();
+
+        // 4. Visualisasi Vektor Garis Rute (Polyline)
+        ctx.save();
+        const routeBoxX = 130;
+        const routeBoxY = 200;
+        const routeBoxW = W - 260;
+        const routeBoxH = 520;
+
+        if (state.points.length >= 2) {
+          const pts = normalizePoints(state.points, routeBoxX, routeBoxY, routeBoxW, routeBoxH);
+          applyShadow();
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
+          }
+          ctx.strokeStyle = theme.accent;
+          ctx.lineWidth = 14;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+
+          // Titik mulai & selesai
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.arc(pts[0].x, pts[0].y, 13, 0, Math.PI * 2);
+          ctx.fillStyle = theme.primary;
+          ctx.fill();
+
+          const endPt = pts[pts.length - 1];
+          ctx.beginPath();
+          ctx.arc(endPt.x, endPt.y, 16, 0, Math.PI * 2);
+          ctx.fillStyle = theme.accent;
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = theme.secondary;
+          ctx.lineWidth = 4;
+          ctx.setLineDash([14, 14]);
+          ctx.beginPath();
+          ctx.moveTo(220, routeBoxY + routeBoxH / 2);
+          ctx.lineTo(W - 220, routeBoxY + routeBoxH / 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 5. Metrik Utama: Jarak (Presisi Terpusat)
+        const distVal = state.distanceKm.toFixed(2);
+        const durVal = formatDuration(state.accumulatedMs);
+        const paceVal = formatPace(state.distanceKm, state.accumulatedMs);
+        const calVal = `${Math.round(state.calories)}`;
+
+        ctx.save();
+        applyShadow();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = theme.secondary;
+        ctx.font = '800 30px Inter, sans-serif';
+        ctx.fillText('JARAK TEMPUH', W / 2, 855);
+
+        ctx.font = '900 176px Inter, sans-serif';
+        const distW = ctx.measureText(distVal).width;
+        ctx.font = '800 54px Inter, sans-serif';
+        const unitW = ctx.measureText('KM').width;
+        const gap = 20;
+        const startX = (W - (distW + gap + unitW)) / 2;
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = theme.primary;
+        ctx.font = '900 176px Inter, sans-serif';
+        ctx.fillText(distVal, startX, 1020);
+
+        ctx.font = '800 54px Inter, sans-serif';
+        ctx.fillText('KM', startX + distW + gap, 1020);
+        ctx.restore();
+
+        // Garis Pemisah Tipis
+        ctx.save();
+        ctx.strokeStyle = theme.secondary;
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(90, 1085);
+        ctx.lineTo(W - 90, 1085);
+        ctx.stroke();
+        ctx.restore();
+
+        // 6. Baris 3 Metrik: Pace, Durasi, Kalori
+        const cols = [
+          { label: 'PACE (/KM)', value: paceVal, x: W * 0.2 },
+          { label: 'DURASI', value: durVal, x: W * 0.5 },
+          { label: 'KALORI (KCAL)', value: calVal, x: W * 0.8 },
+        ];
+
+        ctx.save();
+        applyShadow();
+        ctx.textAlign = 'center';
+        for (const col of cols) {
+          ctx.fillStyle = theme.secondary;
+          ctx.font = '700 26px Inter, sans-serif';
+          ctx.fillText(col.label, col.x, 1155);
+
+          ctx.fillStyle = theme.primary;
+          ctx.font = '900 66px Inter, sans-serif';
+          ctx.fillText(col.value, col.x, 1235);
+        }
+        ctx.restore();
+      }
+
+      function updateEditorButtonsUI() {
+        const isTrans = editorState.bgMode === 'transparent';
+        el.previewWrapper.classList.toggle('checkerboard', isTrans);
+
+        el.btnBgTransparent.className = `py-2.5 px-3 rounded-xl text-xs font-bold border transition ${
+          isTrans ? 'bg-neon text-zinc-950 border-neon' : 'bg-zinc-900 text-zinc-200 border-zinc-800 hover:bg-zinc-800'
+        }`;
+        el.btnBgPhoto.className = `py-2.5 px-3 rounded-xl text-xs font-bold border transition ${
+          !isTrans ? 'bg-neon text-zinc-950 border-neon' : 'bg-zinc-900 text-zinc-200 border-zinc-800 hover:bg-zinc-800'
+        }`;
+
+        el.themeBtns.forEach(btn => {
+          const active = btn.dataset.theme === editorState.theme;
+          btn.className = `theme-btn py-2.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition ${
+            active ? 'bg-zinc-800 border-neon text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800'
+          }`;
+        });
+      }
+
+      function downloadCardPNG() {
+        try {
+          const link = document.createElement('a');
+          const ts = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+          const suffix = editorState.bgMode === 'transparent' ? 'stiker' : 'foto';
+          link.download = `lariku-${suffix}-${ts}.png`;
+          link.href = el.shareCanvas.toDataURL('image/png');
+          link.click();
+        } catch (err) {
+          console.error('Gagal mengunduh gambar:', err);
+        }
+      }
+
+      // =========================================================================
+      // 7. EVENT LISTENERS
+      // =========================================================================
+      el.btnOpenProfile.addEventListener('click', () => el.modalProfile.classList.remove('hidden'));
+      el.btnCloseProfile.addEventListener('click', () => el.modalProfile.classList.add('hidden'));
+      el.btnSaveProfile.addEventListener('click', () => el.modalProfile.classList.add('hidden'));
+      el.modalProfile.addEventListener('click', e => {
+        if (e.target === el.modalProfile) el.modalProfile.classList.add('hidden');
+      });
+
+      el.weightRange.addEventListener('input', e => {
+        profile.weight = Number(e.target.value);
+        saveProfile();
+      });
+      el.weightNum.addEventListener('input', e => {
+        const val = Number(e.target.value);
+        if (val >= 30 && val <= 180) {
+          profile.weight = val;
+          saveProfile();
+        }
+      });
+
+      el.ageBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          profile.ageRange = btn.dataset.age;
+          saveProfile();
+        });
+      });
+
+      el.genderBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          profile.gender = btn.dataset.gender;
+          saveProfile();
+        });
+      });
+
+      el.toggleSim.addEventListener('change', e => {
+        state.simMode = e.target.checked;
+        setGpsStatus(state.simMode ? 'Mode Simulasi' : 'Siap', state.simMode ? 'bg-neon' : 'bg-zinc-500');
+      });
+
+      el.btnStart.addEventListener('click', startRun);
+      el.btnPause.addEventListener('click', pauseRun);
+      el.btnResume.addEventListener('click', resumeRun);
+      el.btnFinishRunning.addEventListener('click', finishRun);
+      el.btnFinishPaused.addEventListener('click', finishRun);
+      el.btnNewRun.addEventListener('click', resetToNewRun);
+
+      el.btnBgTransparent.addEventListener('click', () => {
+        editorState.bgMode = 'transparent';
+        updateEditorButtonsUI();
+        renderShareCard();
+      });
+
+      el.btnBgPhoto.addEventListener('click', () => {
+        el.inputPhoto.click();
+      });
+
+      el.inputPhoto.addEventListener('change', e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const img = new Image();
+          img.onload = () => {
+            editorState.photoImg = img;
+            editorState.bgMode = 'photo';
+            updateEditorButtonsUI();
+            renderShareCard();
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+      });
+
+      el.themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          editorState.theme = btn.dataset.theme;
+          updateEditorButtonsUI();
+          renderShareCard();
+        });
+      });
+
+      el.btnDownload.addEventListener('click', downloadCardPNG);
+      window.addEventListener('resize', drawLiveRoute);
+
+      // Inisialisasi Awal
+      renderProfileUI();
+      updateControlsUI();
+      updateEditorButtonsUI();
+      drawLiveRoute();
+    });
+  </script>
+</body>
+</html>
